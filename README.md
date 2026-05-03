@@ -24,6 +24,7 @@
 ## 手动触发
 
 仓库里打开 `Actions -> AI Morning Brief -> Run workflow` 即可手动试跑。
+如果只是想先看生成结果，不想真实发消息，可以把 `dry_run` 勾成 `true`。
 
 ## 本地测试
 
