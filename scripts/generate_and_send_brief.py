@@ -4,6 +4,7 @@ from __future__ import annotations
 import email.utils
 import os
 import sys
+import textwrap
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -40,6 +41,9 @@ class GithubItem:
 def fetch_text(url: str) -> str:
     response = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
     response.raise_for_status()
+    # Some sites omit charset and requests falls back to ISO-8859-1.
+    if response.encoding and response.encoding.lower() == "iso-8859-1":
+        response.encoding = response.apparent_encoding or "utf-8"
     return response.text
 
 
@@ -187,29 +191,33 @@ def pick_yanfeng_news() -> NewsItem:
     html = fetch_text("https://www.yanfeng.com/cn/company-news")
     soup = BeautifulSoup(html, "html.parser")
 
-    for anchor in soup.select("a[href*='/cn/']"):
-        text = " ".join(anchor.get_text(" ", strip=True).split())
-        href = anchor.get("href", "").strip()
-        if not text or len(text) < 8:
+    for row in soup.select(".masonry-item.views-row"):
+        title_tag = row.select_one("a.showcase-title")
+        date_tag = row.select_one("a.showcase-location-date")
+        if not title_tag or not date_tag:
             continue
+
+        title = " ".join(title_tag.get_text(" ", strip=True).split())
+        location_date = " ".join(date_tag.get_text(" ", strip=True).split())
+        href = title_tag.get("href", "").strip()
         article_url = href if href.startswith("http") else f"https://www.yanfeng.com{href}"
-        article_html = fetch_text(article_url)
-        article_soup = BeautifulSoup(article_html, "html.parser")
-        article_text = article_soup.get_text("\n", strip=True)
+
         date = None
-        for token in article_text.split():
-            if len(token) == 10 and token[4] == "-" and token[7] == "-":
-                date = token
-                break
-        if not date:
-            continue
-        return NewsItem(
-            company="延锋",
-            date=date,
-            title=text,
-            link=article_url,
-            source="延锋官网",
-        )
+        if "," in location_date:
+            raw_date = location_date.split(",")[-1].strip()
+            parts = raw_date.split("/")
+            if len(parts) == 3:
+                day, month, year = parts
+                date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+
+        if title and date:
+            return NewsItem(
+                company="延锋",
+                date=date,
+                title=title,
+                link=article_url,
+                source="延锋官网",
+            )
 
     raise RuntimeError("Unable to locate latest Yanfeng official news")
 
@@ -278,13 +286,21 @@ def send_telegram(text: str) -> None:
 
 
 def main(argv: Iterable[str]) -> int:
-    dry_run = "--dry-run" in set(argv)
+    dry_run = "--dry-run" in set(argv) or os.environ.get("DRY_RUN") == "1"
     brief = build_brief()
     output_path = Path("artifacts") / "ai_morning_brief.txt"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(brief, encoding="utf-8")
 
     if not dry_run:
+        required = [
+            "FEISHU_WEBHOOK_URL",
+            "TELEGRAM_BOT_TOKEN",
+            "TELEGRAM_HOME_CHANNEL",
+        ]
+        missing = [name for name in required if not os.environ.get(name)]
+        if missing:
+            raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
         send_feishu(brief)
         send_telegram(brief)
 
