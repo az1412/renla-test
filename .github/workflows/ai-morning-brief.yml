@@ -22,7 +22,6 @@ jobs:
       contents: read
     env:
       TZ: Asia/Shanghai
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
       FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_HOME_CHANNEL: ${{ secrets.TELEGRAM_HOME_CHANNEL }}
@@ -38,7 +37,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Generate brief only
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: python scripts/generate_and_send_brief.py --dry-run
+
       - name: Generate and send brief
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         run: python scripts/generate_and_send_brief.py
 
       - name: Upload brief artifact
