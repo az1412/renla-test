@@ -22,6 +22,7 @@ jobs:
       contents: read
     env:
       TZ: Asia/Shanghai
+      GITHUB_TOKEN: ${{ github.token }}
       FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_HOME_CHANNEL: ${{ secrets.TELEGRAM_HOME_CHANNEL }}
