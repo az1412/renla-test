@@ -1,6 +1,6 @@
 # AI Morning Brief
 
-每天北京时间 `09:05` 通过 GitHub Actions 生成并发送一份 AI 晨报到飞书和 Telegram。
+每天北京时间 `06:00` 通过 GitHub Actions 生成并发送一份 AI 晨报到飞书和 Telegram。
 
 ## 覆盖范围
 
