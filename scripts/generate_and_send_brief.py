@@ -19,6 +19,7 @@ SH_TZ = timezone(timedelta(hours=8))
 USER_AGENT = "ai-morning-brief-bot/1.0"
 HEADERS = {"User-Agent": USER_AGENT}
 TIMEOUT = 20
+GITHUB_API = "https://api.github.com/"
 
 
 @dataclass
@@ -48,7 +49,13 @@ def fetch_text(url: str) -> str:
 
 
 def fetch_json(url: str) -> dict:
-    response = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+    headers = dict(HEADERS)
+    github_token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if github_token and url.startswith(GITHUB_API):
+        headers["Authorization"] = f"Bearer {github_token}"
+        headers["Accept"] = "application/vnd.github+json"
+
+    response = requests.get(url, headers=headers, timeout=TIMEOUT)
     response.raise_for_status()
     return response.json()
 
